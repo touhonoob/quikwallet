@@ -11,8 +11,9 @@ func main() {
 		fx.Provide(
 			app.NewLoggerMiddleware,
 			app.NewDb,
-			app.NewApp,
+			app.NewRedis,
 			apiv1wallets.NewQueue,
+			apiv1wallets.NewWalletsCache,
 			apiv1wallets.NewWalletRepository,
 		),
 		fx.Invoke(

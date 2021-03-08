@@ -15,9 +15,10 @@ const queueName = "quikgaming"
 type Queue struct {
 	amqpConnection *amqp.Connection
 	walletsRepo IWalletsRepository
+	walletsCache IWalletsCache
 }
 
-func NewQueue(lc fx.Lifecycle, walletsRepo IWalletsRepository) IQueue {
+func NewQueue(lc fx.Lifecycle, walletsRepo IWalletsRepository, walletsCache IWalletsCache) IQueue {
 	if conn, err := amqp.Dial(os.Getenv("QUIKWALLET_RABBITMQ_DSN")); err != nil {
 		panic(err)
 	} else {
@@ -32,6 +33,7 @@ func NewQueue(lc fx.Lifecycle, walletsRepo IWalletsRepository) IQueue {
 		return &Queue{
 			amqpConnection: conn,
 			walletsRepo: walletsRepo,
+			walletsCache: walletsCache,
 		}
 	}
 }
@@ -90,7 +92,11 @@ func (queue *Queue) ConsumeNewWalletLogJob() error {
 				var job NewWalletLogJob
 				if err := json.Unmarshal(d.Body, &job); err != nil {
 					return err
-				} else if err := queue.walletsRepo.ProcessWalletLogs(uuid.MustParse(job.WalletUUID)); err != nil {
+				} else if walletUUID, err := uuid.Parse(job.WalletUUID); err != nil {
+					return err
+				} else if err := queue.walletsRepo.ProcessWalletLogs(walletUUID); err != nil {
+					return err
+				} else if err := queue.walletsCache.InvalidateWalletBalance(walletUUID); err != nil {
 					return err
 				} else {
 					continue

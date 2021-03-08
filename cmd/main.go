@@ -28,9 +28,11 @@ func main() {
 		fx.Provide(
 			app.NewLoggerMiddleware,
 			app.NewDb,
+			app.NewRedis,
 			app.NewApp,
-			apiv1wallets.NewQueue,
 			apiv1.NewApiV1,
+			apiv1wallets.NewQueue,
+			apiv1wallets.NewWalletsCache,
 			apiv1wallets.NewApiV1Wallets,
 			apiv1wallets.NewWalletRepository,
 			apiv1wallets.NewWalletsController,

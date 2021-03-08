@@ -1,12 +1,14 @@
 package app
 
 import (
+	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"time"
+	"github.com/go-redis/redis/v8"
 )
 
 func NewDb() *gorm.DB {
@@ -24,4 +26,10 @@ func NewDb() *gorm.DB {
 	} else {
 		return db
 	}
+}
+
+func NewRedis() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr: fmt.Sprintf("%s:%s", os.Getenv("QUIKWALLET_REDIS_HOST"), os.Getenv("QUIKWALLET_REDIS_PORT")),
+	})
 }

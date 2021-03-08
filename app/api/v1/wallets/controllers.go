@@ -11,12 +11,14 @@ import (
 
 type WalletsController struct {
 	repository IWalletsRepository
+	cache IWalletsCache
 	queue IQueue
 }
 
-func NewWalletsController(repository IWalletsRepository, queue IQueue) IWalletsController {
+func NewWalletsController(repository IWalletsRepository, cache IWalletsCache, queue IQueue) IWalletsController {
 	return &WalletsController{
 		repository: repository,
+		cache: cache,
 		queue: queue,
 	}
 }
@@ -91,7 +93,7 @@ func (controller *WalletsController) GetBalance(c *gin.Context) {
 			log.Error().Err(err).Msg("failed to get wallet")
 			c.AbortWithError(500, errors.New("failed to get wallet"))
 		}
-	} else if balance, err := controller.repository.GetBalance(uuid); err != nil {
+	} else if balance, err := controller.cache.GetWalletBalance(uuid); err != nil {
 		log.Error().Err(err).Msg("failed to get wallet balance")
 		c.AbortWithError(500, errors.New("failed to get wallet balance"))
 	} else {
