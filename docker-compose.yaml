@@ -1,0 +1,124 @@
+version: "3.9"
+
+networks:
+  backend:
+    driver: "bridge"
+
+volumes:
+  mysql:
+    driver: "local"
+  rabbitmq:
+    driver: "local"
+  gocache:
+    driver: "local"
+  gomodcache:
+    driver: "local"
+
+services:
+  quikwallet_setup:
+    volumes:
+      - gocache:/root/.cache/go-build
+      - gomodcache:/go/pkg/mod
+    build: .
+    env_file: ".env"
+    entrypoint: ["/bin/sh","-c"]
+    command:
+      - |
+        /go/bin/quikwallet-migrate
+        /go/bin/quikwallet-seeder
+    restart: on-failure
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  quikwallet:
+    volumes:
+      - gocache:/root/.cache/go-build
+      - gomodcache:/go/pkg/mod
+    build: .
+    env_file: ".env"
+    command: "/go/bin/quikwallet"
+    ports:
+      - "8080:8080"
+    expose:
+      - 8080
+    restart: on-failure
+    depends_on:
+      quikwallet_setup:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  quikwallet_test:
+    volumes:
+      - gocache:/root/.cache/go-build
+      - gomodcache:/go/pkg/mod
+    build: .
+    env_file: ".env"
+    command: ["go", "test", "-v", "cmd/main_test.go"]
+    depends_on:
+      - quikwallet
+      - quikwallet_queue_worker
+  quikwallet_queue_worker:
+    volumes:
+      - gocache:/root/.cache/go-build
+      - gomodcache:/go/pkg/mod
+    build: .
+    env_file: ".env"
+    command: "/go/bin/quikwallet-queue-worker"
+    restart: on-failure
+    depends_on:
+      quikwallet_setup:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  redis:
+    image: "redis:6"
+    ports:
+      - "6379:6379"
+    expose:
+      - 6379
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 1s
+      timeout: 3s
+      retries: 120
+  mysql:
+    image: "mysql:8"
+    volumes:
+      - mysql:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=quikwallet
+      - MYSQL_ROOT_PASSWORD=root
+    expose:
+      - 3306
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 120
+  rabbitmq:
+    image: "rabbitmq:3.8.14"
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    expose:
+      - 5672
+    ports:
+      - "5672:5672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 120
