@@ -2,7 +2,6 @@ package apiv1wallets
 
 import (
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"time"
@@ -58,6 +57,7 @@ func (repo *WalletsRepository) ProcessWalletLogs(walletUUID uuid.UUID) error {
 	var logs []WalletLog
 	if err := repo.db.Model(&WalletLog{}).
 		Where("wallet_uuid = ?", walletUUID.String()).
+		Where("status = ?", ToBeProcessed).
 		Order("created_at ASC").
 		Find(&logs).Error; err != nil {
 		return err
@@ -71,7 +71,6 @@ func (repo *WalletsRepository) ProcessWalletLogs(walletUUID uuid.UUID) error {
 			}
 
 			newBalance := balance.Add(decimal.NewFromInt(walletLog.Log)).Floor()
-			log.Info().Msgf("%s + %s = %s (%b)", balance.String(), decimal.NewFromInt(walletLog.Log).String(), newBalance.String(), newBalance.IsNegative())
 			if newBalance.IsNegative() {
 				if err := repo.db.Model(&walletLog).Update(
 					"status", Rejected,
