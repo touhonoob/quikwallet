@@ -1,19 +1,3 @@
-// @title QuikWallet API Server
-// @version 1.0
-// @description QuikWallet API Server
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name Peter C.
-// @contact.email touhonoob@gmail.com
-
-// @host 0.0.0.0:8080
-// @BasePath /api
-// @query.collection.format multi
-
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
-
 package main
 
 import (
